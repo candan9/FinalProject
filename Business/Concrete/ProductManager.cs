@@ -2,6 +2,9 @@
 using Business.BusinessAspects.AutoFac;
 using Business.Constants;
 using Business.ValidationRules.FluentValidation;
+using Core.Aspects.Autofact.Caching;
+using Core.Aspects.Autofact.Performance;
+using Core.Aspects.Autofact.Transaction;
 using Core.Aspects.Autofact.Validation;
 using Core.CrossCuttingConcerns.Validation;
 using Core.Utilities.Business;
@@ -30,6 +33,7 @@ namespace Business.Concrete
         }
         [SecuredOperation("product.add,admin")]
         [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
         public IResult Add(Product product)
         {
             IResult result= BusinessRules.Run(CheckIfProductCountOfCategoryCorrect(product.CategoryId),
@@ -41,7 +45,7 @@ namespace Business.Concrete
             return new SuccessResult(Messages.ProductAdded);
 
         }
-
+        [CacheAspect]
         public IDataResult<List<Product>> GetAll()
         {
             //yetki testi
@@ -57,6 +61,8 @@ namespace Business.Concrete
             return new SuccessDataResult<List<Product>> (_productDal.GetAll(p => p.CategoryId == id));
         }
 
+        [CacheAspect]
+        [PerformanceAspect(5)]
         public IDataResult <Product> GetById(int productId)
         {
            return new SuccessDataResult<Product>(_productDal.Get(p => p.ProductId == productId));
@@ -72,6 +78,7 @@ namespace Business.Concrete
             return new SuccessDataResult < List < ProductDetailDto >> (_productDal.GetProductDetails());
         }
         [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
         public IResult Update(Product product)
         {
             throw new NotImplementedException();
@@ -105,6 +112,11 @@ namespace Business.Concrete
             }
             return new SuccessResult();
         }
-
+        [TransactionScopeAspect]
+        public IResult AddTransactionsTest(Product product)
+        {
+            _productDal.Update(product);
+            return new SuccessResult(Messages.ProductUpdated);
+        }
     }
 }
